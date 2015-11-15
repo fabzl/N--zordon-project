@@ -3,54 +3,6 @@
 - WebSpeech
 */
 
-//WebSpeech API
-var final_transcript = '';
-var recognizing = false;
-var last10messages = []; //to be populated later
-
-if (!('webkitSpeechRecognition' in window)) {
-  console.log("webkitSpeechRecognition is not available");
-} else {
-  var recognition = new webkitSpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
-  recognition.onstart = function() {
-    recognizing = true;
-  };
-
-  recognition.onresult = function(event) {
-    var interim_transcript = '';
-    for (var i = event.resultIndex; i < event.results.length; ++i) {
-      if (event.results[i].isFinal) {
-        final_transcript += event.results[i][0].transcript;
-        $('#msg').addClass("final");
-        $('#msg').removeClass("interim");
-      } else {
-        interim_transcript += event.results[i][0].transcript;
-        $("#msg").val(interim_transcript);
-        $('#msg').addClass("interim");
-        $('#msg').removeClass("final");
-      }
-    }
-    $("#msg").val(final_transcript);
-    };
-  }
-
-  function startButton(event) {
-    if (recognizing) {
-      recognition.stop();
-      recognizing = false;
-      $("#start_button").prop("value", "Record");
-      return;
-    }
-    final_transcript = '';
-    recognition.lang = "en-GB"
-    recognition.start();
-    $("#start_button").prop("value", "Recording ... Click to stop.");
-    $("#msg").val();
-  }
-//end of WebSpeech
 
 /*
 Functions
@@ -245,54 +197,6 @@ $(document).ready(function() {
     $("#msg").val("w:"+name+":");
     $("#msg").focus();
   });
-/*
-  $("#whisper").change(function() {
-    var peopleOnline = [];
-    if ($("#whisper").prop('checked')) {
-      console.log("checked, going to get the peeps");
-      //peopleOnline = ["Tamas", "Steve", "George"];
-      socket.emit("getOnlinePeople", function(data) {
-        $.each(data.people, function(clientid, obj) {
-          console.log(obj.name);
-          peopleOnline.push(obj.name);
-        });
-        console.log("adding typeahead")
-        $("#msg").typeahead({
-            local: peopleOnline
-          }).each(function() {
-            if ($(this).hasClass('input-lg'))
-              $(this).prev('.tt-hint').addClass('hint-lg');
-        });
-      });
-      
-      console.log(peopleOnline);
-    } else {
-      console.log('remove typeahead');
-      $('#msg').typeahead('destroy');
-    }
-  });
-  // $( "#whisper" ).change(function() {
-  //   var peopleOnline = [];
-  //   console.log($("#whisper").prop('checked'));
-  //   if ($("#whisper").prop('checked')) {
-  //     console.log("checked, going to get the peeps");
-  //     peopleOnline = ["Tamas", "Steve", "George"];
-  //     // socket.emit("getOnlinePeople", function(data) {
-  //     //   $.each(data.people, function(clientid, obj) {
-  //     //     console.log(obj.name);
-  //     //     peopleOnline.push(obj.name);
-  //     //   });
-  //     // });
-  //     //console.log(peopleOnline);
-  //   }
-  //   $("#msg").typeahead({
-  //         local: peopleOnline
-  //       }).each(function() {
-  //         if ($(this).hasClass('input-lg'))
-  //           $(this).prev('.tt-hint').addClass('hint-lg');
-  //       });
-  // });
-*/
 
 //socket-y stuff
 socket.on("exists", function(data) {
@@ -358,16 +262,6 @@ socket.on("history", function(data) {
       $('#people').append("<li class=\"list-group-item\"><span>" + obj.name + "</span> <i class=\"fa fa-"+obj.device+"\"></i> " + html);
       //peopleOnline.push(obj.name);
     });
-
-    /*var whisper = $("#whisper").prop('checked');
-    if (whisper) {
-      $("#msg").typeahead({
-          local: peopleOnline
-      }).each(function() {
-         if ($(this).hasClass('input-lg'))
-              $(this).prev('.tt-hint').addClass('hint-lg');
-      });
-    }*/
   });
 
   socket.on("chat", function(msTime, person, msg) {

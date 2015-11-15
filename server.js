@@ -35,7 +35,7 @@
 //exports = module.exports = app;
 
 
-
+// obj definition 
 var express = require('express')
 , app = express()
 , server = require('http').createServer(app)
@@ -49,14 +49,133 @@ var mongoose = require('mongoose');
 
 var mongoURI = "mongodb://localhost:27017/test";
 var MongoDB = mongoose.connect(mongoURI).connection;
+
+var people = {};
+var rooms = {};
+var sockets = [];
+var chatHistory = {};
+var zordonCore = {};
+
+
+
+
+
+
+
 MongoDB.on('error', function(err) { console.log(err.message); });
 MongoDB.once('open', function() {
   console.log("mongodb connection open");
+
+  // to empty the database
+  //mongoose.connection.db.dropDatabase();
+
+  zordonCore.getPeopleFromDatabase();
+
 });
 
+ 
 
 
 
+//////////// schema example 
+
+
+// var kittySchema = mongoose.Schema({
+//     name: String
+// });
+
+
+// NOTE: methods must be added to the schema before compiling it with mongoose.model()
+// kittySchema.methods.speak = function () {
+//   var greeting = this.name
+//     ? "Meow name is " + this.name
+//     : "I don't have a name";
+//   console.log(greeting);
+// };
+
+//var Kitten = mongoose.model('Kitten', kittySchema);
+
+//var fluffy = new Kitten({ name: 'fluffy' });
+// fluffy.speak(); // "Meow name is fluffy"
+
+
+
+// fluffy.save(function (err, fluffy) {
+//   if (err) return console.error(err);
+//   fluffy.speak();
+// });
+
+
+// Kitten.find(function (err, kittens) {
+//   if (err) return console.error(err);
+//   console.log(kittens);
+// });
+
+// The permitted SchemaTypes are
+
+// String
+// Number
+// Date
+// Buffer
+// Boolean
+// Mixed
+// ObjectId
+// Array
+
+/// schema mongoose projects 
+
+var zordonBiosSchema = mongoose.Schema({
+    id: String,
+});
+
+var personSchema = mongoose.Schema({
+    name : String,
+    owns : String,
+    inroom: String,
+    device: String
+});
+
+var projectSchema = mongoose.Schema({
+    projectname: String,
+    client: String,
+    value: Number,
+    description: String
+});
+
+var inventorySchema = mongoose.Schema({
+    id: String,
+    quantity: Number,
+    description: String,
+    value: Number,
+});
+
+//var Kitten = mongoose.model('Kitten', kittySchema);
+var Zordon = mongoose.model('ZordonBios', zordonBiosSchema);
+var Inventory = mongoose.model('Inventory', inventorySchema);
+var Person = mongoose.model('Person', personSchema);
+
+
+var zordon = new Zordon ({id: 'zordon'}); 
+//var inventory = new Inventory({name:'zordon'});
+
+//var fluffy = new Kitten({ name: 'fluffy' });
+
+
+
+
+// person.save(function (err, person) {
+//   if (err) return console.error(err);
+//  // fluffy.speak();
+//  	console.log("This guy has been added : ",person);
+// });
+
+// Person.find(function (err, persons) {
+//   if (err) return console.error(err);
+//   console.log(persons);
+// });
+
+
+/////////////////
 
 
 app.configure(function() {
@@ -90,10 +209,32 @@ server.listen(app.get('port'), app.get('ipaddr'), function(){
 });
 
 io.set("log level", 1);
-var people = {};
-var rooms = {};
-var sockets = [];
-var chatHistory = {};
+
+
+zordonCore.getPeopleFromDatabase = function () {
+
+	console.log("get people from database");
+	Person.find(function (err, persons) {
+
+		if (err) return console.error(err);
+			console.log(persons);
+		
+		// for (var i = 0;i<persons.length;i++){
+			people = persons;
+		// 	console.log(i,persons[i].name);
+		// 	people.person = persons[i];
+		// }
+
+		// for(var person in persons ){
+		// 	console.log(person + ': ' + persons[person]);
+		// 	people.person = persons[i];
+		// }
+
+	}
+	);
+
+};
+
 
 function purge(s, action) {
 	/*
@@ -207,17 +348,18 @@ function purge(s, action) {
 				}
 				delete people[s.id];
 				sizePeople = _.size(people);
+
 				io.sockets.emit("update-people", {people: people, count: sizePeople});
 				var o = _.findWhere(sockets, {'id': s.id});
 				sockets = _.without(sockets, o);
 			} else if (action === "removeRoom") {
-				s.emit("update", "Only the owner can remove a room.");
+				s.emit("update", "Only the owner can remove a project.");
 			} else if (action === "leaveRoom") {
 				if (_.contains((room.people), s.id)) {
 					var personIndex = room.people.indexOf(s.id);
 					room.people.splice(personIndex, 1);
 					people[s.id].inroom = null;
-					io.sockets.emit("update", people[s.id].name + " has left the room.");
+					io.sockets.emit("update", people[s.id].name + " has left the project.");
 					s.leave(room.name);
 				}
 			}
@@ -231,7 +373,7 @@ function purge(s, action) {
 			io.sockets.emit("update-people", {people: people, count: sizePeople});
 			var o = _.findWhere(sockets, {'id': s.id});
 			sockets = _.without(sockets, o);
-		}		
+		}
 	}
 }
 
@@ -265,12 +407,23 @@ io.sockets.on("connection", function (socket) {
 			socket.emit("roomList", {rooms: rooms, count: sizeRooms});
 			socket.emit("joined"); //extra emit for GeoLocation
 			sockets.push(socket);
+
+
+			var person = new Person(people[socket.id]);
+			// save in database
+			person.save(function (err, person) {
+			  if (err) return console.error(err);
+			 // fluffy.speak();
+
+			 	console.log("This guy has been added : ",person);
+			});
+
 		}
 	});
 
 	socket.on("getOnlinePeople", function(fn) {
-                fn({people: people});
-        });
+			fn({people: people});
+	});
 
 	socket.on("countryUpdate", function(data) { //we know which country the user is from
 		country = data.country.toLowerCase();
@@ -322,7 +475,7 @@ io.sockets.on("connection", function (socket) {
 					chatHistory[socket.room].push(people[socket.id].name + ": " + msg);
 				}
 		    	} else {
-				socket.emit("update", "Please connect to a room.");
+				socket.emit("update", "Please join a project.");
 		    	}
 		}
 	});
@@ -336,7 +489,7 @@ io.sockets.on("connection", function (socket) {
 	//Room functions
 	socket.on("createRoom", function(name) {
 		if (people[socket.id].inroom) {
-			socket.emit("update", "You are in a room. Please leave it first to create your own.");
+			socket.emit("update", "You are in a project. Please leave it first to create your own.");
 		} else if (!people[socket.id].owns) {
 			var id = uuid.v4();
 			var room = new Room(name, id, socket.id);
@@ -352,8 +505,12 @@ io.sockets.on("connection", function (socket) {
 			socket.emit("update", "Welcome to " + room.name + ".");
 			socket.emit("sendRoomID", {id: id});
 			chatHistory[socket.room] = [];
+
+			// add room to the database
+
+
 		} else {
-			socket.emit("update", "You have already created a room.");
+			socket.emit("update", "You have already created a project.");
 		}
 	});
 
@@ -371,7 +528,7 @@ io.sockets.on("connection", function (socket) {
 		 if (socket.id === room.owner) {
 			purge(socket, "removeRoom");
 		} else {
-                	socket.emit("update", "Only the owner can remove a room.");
+                	socket.emit("update", "Only the owner can remove a project.");
 		}
 	});
 
@@ -379,20 +536,20 @@ io.sockets.on("connection", function (socket) {
 		if (typeof people[socket.id] !== "undefined") {
 			var room = rooms[id];
 			if (socket.id === room.owner) {
-				socket.emit("update", "You are the owner of this room and you have already been joined.");
+				socket.emit("update", "You are the owner of this project and you have already been joined.");
 			} else {
 				if (_.contains((room.people), socket.id)) {
-					socket.emit("update", "You have already joined this room.");
+					socket.emit("update", "You have already joined this project.");
 				} else {
 					if (people[socket.id].inroom !== null) {
-				    		socket.emit("update", "You are already in a room ("+rooms[people[socket.id].inroom].name+"), please leave it first to join another room.");
+				    		socket.emit("update", "You are already in a project ("+rooms[people[socket.id].inroom].name+"), please leave it first to join another room.");
 				    	} else {
 						room.addPerson(socket.id);
 						people[socket.id].inroom = id;
 						socket.room = room.name;
 						socket.join(socket.room);
 						user = people[socket.id];
-						io.sockets.in(socket.room).emit("update", user.name + " has connected to " + room.name + " room.");
+						io.sockets.in(socket.room).emit("update", user.name + " has connected to " + room.name + " project.");
 						socket.emit("update", "Welcome to " + room.name + ".");
 						socket.emit("sendRoomID", {id: id});
 						var keys = _.keys(chatHistory);

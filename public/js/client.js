@@ -210,7 +210,7 @@ $(document).ready(function() {
        if (roomExists) {
           $("#errors").empty();
           $("#errors").show();
-          $("#errors").append("Room <i>" + roomName + "</i> already exists");
+          $("#errors").append("Project <i>" + roomName + "</i> already exists");
         } else {      
         if (roomName.length > 0) { //also check for roomname
           socket.emit("createRoom", roomName);
@@ -348,14 +348,14 @@ socket.on("history", function(data) {
   socket.on("update-people", function(data){
     //var peopleOnline = [];
     $("#people").empty();
-    $('#people').append("<li class=\"list-group-item active\">People online <span class=\"badge\">"+data.count+"</span></li>");
+    $('#people').append("<li class=\"list-group-item active\">People <span class=\"badge\">"+data.count+"</span></li>");
     $.each(data.people, function(a, obj) {
       if (!("country" in obj)) {
         html = "";
       } else {
         html = "<img class=\"flag flag-"+obj.country+"\"/>";
       }
-      $('#people').append("<li class=\"list-group-item\"><span>" + obj.name + "</span> <i class=\"fa fa-"+obj.device+"\"></i> " + html + " <a href=\"#\" class=\"whisper btn btn-xs\">whisper</a></li>");
+      $('#people').append("<li class=\"list-group-item\"><span>" + obj.name + "</span> <i class=\"fa fa-"+obj.device+"\"></i> " + html);
       //peopleOnline.push(obj.name);
     });
 
@@ -378,25 +378,17 @@ socket.on("history", function(data) {
      timeout = setTimeout(timeoutFunction, 0);
   });
 
-  socket.on("whisper", function(msTime, person, msg) {
-    if (person.name === "You") {
-      s = "whisper"
-    } else {
-      s = "whispers"
-    }
-    $("#msgs").append("<li><strong><span class='text-muted'>" + timeFormat(msTime) + person.name + "</span></strong> "+s+": " + msg + "</li>");
-  });
 
   socket.on("roomList", function(data) {
     $("#rooms").text("");
-    $("#rooms").append("<li class=\"list-group-item active\">List of rooms <span class=\"badge\">"+data.count+"</span></li>");
+    $("#rooms").append("<li class=\"list-group-item active\">List of project <span class=\"badge\">"+data.count+"</span></li>");
      if (!jQuery.isEmptyObject(data.rooms)) { 
       $.each(data.rooms, function(id, room) {
         var html = "<button id="+id+" class='joinRoomBtn btn btn-default btn-xs' >Join</button>" + " " + "<button id="+id+" class='removeRoomBtn btn btn-default btn-xs'>Remove</button>";
         $('#rooms').append("<li id="+id+" class=\"list-group-item\"><span>" + room.name + "</span> " + html + "</li>");
       });
     } else {
-      $("#rooms").append("<li class=\"list-group-item\">There are no rooms yet.</li>");
+      $("#rooms").append("<li class=\"list-group-item\">There are no projects yet.</li>");
     }
   });
 
